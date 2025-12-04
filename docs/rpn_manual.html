@@ -4,360 +4,427 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>现代 C++ 手把手实现 RPN 计算器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
     <style>
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --accent-color: #e74c3c;
-            --text-color: #333;
-            --code-bg: #f8f9fa;
-            --border-color: #e1e4e8;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            color: var(--text-color);
+            color: #333;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
         }
         
         .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .paper {
             background: white;
             border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            margin-top: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            padding: 50px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .paper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
         }
         
         header {
             text-align: center;
             margin-bottom: 40px;
             padding-bottom: 20px;
-            border-bottom: 2px solid var(--secondary-color);
+            border-bottom: 2px solid #eaeaea;
         }
         
         h1 {
-            color: var(--primary-color);
-            font-size: 2.5em;
+            font-size: 2.8rem;
+            color: #2c3e50;
             margin-bottom: 10px;
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
         
         .subtitle {
-            font-size: 1.2em;
-            color: #666;
+            font-size: 1.3rem;
+            color: #7f8c8d;
             margin-bottom: 30px;
+            font-weight: 400;
         }
         
         .meta {
             display: flex;
             justify-content: center;
             gap: 30px;
+            flex-wrap: wrap;
             margin-bottom: 30px;
-            color: #666;
-            font-size: 0.9em;
         }
         
         .meta-item {
             display: flex;
             align-items: center;
             gap: 8px;
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.95rem;
         }
         
-        h2 {
-            color: var(--primary-color);
-            border-left: 4px solid var(--secondary-color);
-            padding-left: 15px;
-            margin-top: 40px;
+        .meta-item span:first-child {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+        
+        .badge {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 40px 0;
+            border-left: 5px solid #667eea;
+        }
+        
+        .toc h2 {
+            color: #2c3e50;
             margin-bottom: 20px;
+            font-size: 1.5rem;
         }
         
-        h3 {
-            color: #555;
-            margin-top: 30px;
+        .toc ol {
+            list-style: none;
+            counter-reset: item;
+            padding-left: 20px;
+        }
+        
+        .toc li {
+            counter-increment: item;
             margin-bottom: 15px;
+            font-size: 1.1rem;
         }
         
-        code {
-            font-family: 'Fira Code', 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, 'Courier New', monospace;
-            background: var(--code-bg);
-            padding: 2px 6px;
+        .toc li::before {
+            content: counter(item) ". ";
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .toc a {
+            color: #2c3e50;
+            text-decoration: none;
+            transition: color 0.3s;
+            font-weight: 500;
+        }
+        
+        .toc a:hover {
+            color: #667eea;
+        }
+        
+        .chapter {
+            margin: 60px 0;
+            padding-bottom: 40px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .chapter:last-child {
+            border-bottom: none;
+        }
+        
+        .chapter h2 {
+            color: #2c3e50;
+            font-size: 2rem;
+            margin-bottom: 25px;
+            padding-left: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .chapter p {
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: #555;
+            margin-bottom: 25px;
+        }
+        
+        .code-block {
+            position: relative;
+            margin: 30px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .code-header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-filename {
+            font-weight: 600;
+        }
+        
+        .copy-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 5px 15px;
             border-radius: 4px;
-            font-size: 0.9em;
-            color: var(--accent-color);
-            border: 1px solid #e1e4e8;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.8rem;
+            transition: background 0.3s;
         }
         
-        pre {
-            background: #282c34;
-            color: #abb2bf;
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        pre[class*="language-"] {
+            margin: 0;
+            border-radius: 0;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .console {
+            background: #1a1a1a;
+            color: #00ff9d;
             padding: 20px;
             border-radius: 8px;
-            overflow-x: auto;
-            font-family: 'Fira Code', 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.95rem;
             margin: 20px 0;
             position: relative;
-            border-left: 4px solid var(--secondary-color);
+            overflow-x: auto;
         }
         
-        pre::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 30px;
-            background: #21252b;
-            border-radius: 8px 8px 0 0;
+        .console::before {
+            content: "$ ";
+            color: #00ff9d;
         }
         
-        pre code {
-            background: none;
-            padding: 0;
-            border: none;
-            color: inherit;
-            font-size: inherit;
+        .note {
+            background: linear-gradient(135deg, #e8f4fd, #d4e6f8);
+            border-left: 4px solid #3498db;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 0 8px 8px 0;
         }
         
-        .filename {
-            display: inline-block;
-            background: #21252b;
-            color: #ccc;
-            padding: 5px 15px;
-            border-radius: 4px 4px 0 0;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.9em;
-            margin-bottom: -10px;
-            position: relative;
-            z-index: 1;
+        .note-title {
+            color: #2c3e50;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .note-title::before {
+            content: "📝";
+        }
+        
+        .challenge {
+            background: linear-gradient(135deg, #fff8e1, #ffecb3);
+            border-left: 4px solid #ff9800;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .challenge-title {
+            color: #e65100;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .challenge-title::before {
+            content: "🚀";
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        th, td {
-            border: 1px solid var(--border-color);
-            padding: 12px 15px;
-            text-align: left;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
         }
         
         th {
-            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
+            padding: 15px;
+            text-align: left;
             font-weight: 600;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #eaeaea;
         }
         
         tr:nth-child(even) {
             background: #f8f9fa;
         }
         
-        .note {
-            background: #e8f4fd;
-            border-left: 4px solid var(--secondary-color);
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 0 4px 4px 0;
-        }
-        
-        .note-title {
-            font-weight: bold;
-            color: var(--secondary-color);
-            margin-bottom: 8px;
-        }
-        
-        .chapter {
-            counter-increment: chapter;
-            position: relative;
-            padding-left: 50px;
-            margin-bottom: 30px;
-        }
-        
-        .chapter::before {
-            content: counter(chapter);
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 40px;
-            height: 40px;
-            background: var(--secondary-color);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-        
         .highlight {
             background: linear-gradient(120deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        
-        .button {
-            display: inline-block;
-            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: transform 0.3s, box-shadow 0.3s;
-            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-        }
-        
-        .button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
-        }
-        
-        .toc {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 30px 0;
-            border-left: 4px solid var(--secondary-color);
-        }
-        
-        .toc ul {
-            list-style-type: none;
-            padding-left: 20px;
-        }
-        
-        .toc li {
-            margin: 8px 0;
-            position: relative;
-            padding-left: 20px;
-        }
-        
-        .toc li::before {
-            content: '▶';
-            position: absolute;
-            left: 0;
-            color: var(--secondary-color);
-        }
-        
-        .challenge {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            border-left: 4px solid #e74c3c;
-            padding: 20px;
-            border-radius: 0 8px 8px 0;
-            margin: 30px 0;
-        }
-        
-        .challenge-title {
-            color: #e74c3c;
-            font-weight: bold;
-            font-size: 1.2em;
-            margin-bottom: 10px;
-        }
-        
-        .console {
-            background: #1a1a1a;
-            color: #00ff00;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Fira Code', monospace;
-            margin: 20px 0;
-            overflow-x: auto;
-        }
-        
-        .console::before {
-            content: '$ ';
-            color: #00ff00;
-            margin-right: 10px;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            background: linear-gradient(135deg, var(--accent-color), #c0392b);
-            color: white;
-            border-radius: 20px;
-            font-size: 0.8em;
-            font-weight: bold;
-            margin-right: 8px;
-            margin-bottom: 8px;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
         }
         
         footer {
             text-align: center;
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border-color);
-            color: #666;
-            font-size: 0.9em;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid #eaeaea;
+            color: #7f8c8d;
+            font-size: 0.95rem;
+        }
+        
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin: 10px;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .paper {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .meta {
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+            }
+            
+            .chapter h2 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>现代 C++ 手把手实现 RPN 计算器</h1>
-            <div class="subtitle">从零开始实现一个完整的逆波兰表示法计算器</div>
-            
-            <div class="meta">
-                <div class="meta-item">
-                    <span>📅 版本:</span>
-                    <span>1.0</span>
+        <div class="paper">
+            <header>
+                <h1>现代 C++ 手把手实现 RPN 计算器</h1>
+                <div class="subtitle">从零开始实现一个完整的逆波兰表示法计算器</div>
+                
+                <div class="meta">
+                    <div class="meta-item">
+                        <span>版本:</span>
+                        <span>1.0</span>
+                    </div>
+                    <div class="meta-item">
+                        <span>编译器:</span>
+                        <span>GCC 10+/Clang 12+/MSVC 2019+</span>
+                    </div>
+                    <div class="meta-item">
+                        <span>标准:</span>
+                        <span>C++17</span>
+                    </div>
                 </div>
-                <div class="meta-item">
-                    <span>⚙️ 编译器:</span>
-                    <span>GCC 10+/Clang 12+/MSVC 2019+</span>
+                
+                <div class="badges">
+                    <span class="badge">RPN</span>
+                    <span class="badge">C++17</span>
+                    <span class="badge">STL</span>
+                    <span class="badge">算法</span>
+                    <span class="badge">命令行</span>
+                    <span class="badge">开源</span>
                 </div>
-                <div class="meta-item">
-                    <span>🎯 标准:</span>
-                    <span>C++17</span>
-                </div>
-            </div>
-            
-            <div>
-                <span class="badge">RPN</span>
-                <span class="badge">C++17</span>
-                <span class="badge">STL</span>
-                <span class="badge">算法</span>
-                <span class="badge">命令行</span>
-                <span class="badge">开源</span>
-            </div>
-        </header>
+            </header>
 
-        <div class="toc">
-            <div class="note-title">📚 目录</div>
-            <ul>
-                <li><a href="#chapter1">第 1 章: Hello RPN</a></li>
-                <li><a href="#chapter2">第 2 章: 头文件化 + 单元测试</a></li>
-                <li><a href="#chapter3">第 3 章: 交互式 REPL</a></li>
-                <li><a href="#chapter4">第 4 章: 单文件发布 & 交叉编译</a></li>
-                <li><a href="#chapter5">第 5 章: 扩展功能与挑战</a></li>
-            </ul>
-        </div>
-
-        <div class="chapter" id="chapter1">
-            <h2>第 1 章: Hello RPN</h2>
-            <p>我们先从一个最小可运行的 RPN 计算器开始，理解逆波兰表示法的核心思想。</p>
-            
-            <div class="note">
-                <div class="note-title">📝 RPN 简介</div>
-                <p>逆波兰表示法（Reverse Polish Notation）是一种不需要括号的数学表达式表示法，所有运算符都跟在操作数后面。</p>
-                <p>示例：<code>3 4 +</code> 表示 <code>3 + 4</code>，<code>3 4 + 5 *</code> 表示 <code>(3 + 4) * 5</code></p>
+            <div class="toc">
+                <h2>目录</h2>
+                <ol>
+                    <li><a href="#chapter1">第 1 章: Hello RPN</a></li>
+                    <li><a href="#chapter2">第 2 章: 头文件化 + 单元测试</a></li>
+                    <li><a href="#chapter3">第 3 章: 交互式 REPL</a></li>
+                    <li><a href="#chapter4">第 4 章: 单文件发布 & 交叉编译</a></li>
+                    <li><a href="#chapter5">第 5 章: 扩展功能与挑战</a></li>
+                </ol>
             </div>
-            
-            <div class="filename">rpn_min.cpp</div>
-            <pre><code>#include &lt;iostream&gt;
+
+            <div class="chapter" id="chapter1">
+                <h2>第 1 章: Hello RPN</h2>
+                <p>我们先从一个最小可运行的 RPN 计算器开始，理解逆波兰表示法的核心思想。</p>
+                
+                <div class="note">
+                    <div class="note-title">RPN 简介</div>
+                    <p>逆波兰表示法（Reverse Polish Notation）是一种不需要括号的数学表达式表示法，所有运算符都跟在操作数后面。</p>
+                    <p>示例：<code>3 4 +</code> 表示 <code>3 + 4</code>，<code>3 4 + 5 *</code> 表示 <code>(3 + 4) * 5</code></p>
+                </div>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-filename">rpn_min.cpp</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制代码</button>
+                    </div>
+                    <pre><code class="language-cpp">#include &lt;iostream&gt;
 #include &lt;sstream&gt;
 #include &lt;stack&gt;
 #include &lt;string&gt;
@@ -369,7 +436,6 @@ double rpn_evaluate(const std::string& expression) {
     std::string token;
     
     while (iss &gt;&gt; token) {
-        // 如果是运算符
         if (token.size() == 1 && std::string("+-*/").find(token[0]) != std::string::npos) {
             if (stack.size() &lt; 2) {
                 throw std::runtime_error("Error: insufficient operands");
@@ -388,7 +454,6 @@ double rpn_evaluate(const std::string& expression) {
                     break;
             }
         } else {
-            // 否则是操作数
             try {
                 stack.push(std::stod(token));
             } catch (const std::invalid_argument&) {
@@ -419,26 +484,30 @@ int main() {
     
     return 0;
 }</code></pre>
-            
-            <h3>编译运行</h3>
-            <div class="console">g++ -std=c++17 -o rpn_min rpn_min.cpp && ./rpn_min</div>
-            
-            <div class="note">
-                <div class="note-title">🎯 本章要点</div>
-                <ul>
-                    <li>理解 RPN 的基本原理</li>
-                    <li>使用 <code>std::stack</code> 实现计算</li>
-                    <li>基本的错误处理机制</li>
-                </ul>
+                </div>
+                
+                <div class="console">g++ -std=c++17 -o rpn_min rpn_min.cpp && ./rpn_min</div>
+                
+                <div class="note">
+                    <div class="note-title">本章要点</div>
+                    <ul>
+                        <li>理解 RPN 的基本原理</li>
+                        <li>使用 <code>std::stack</code> 实现计算</li>
+                        <li>基本的错误处理机制</li>
+                    </ul>
+                </div>
             </div>
-        </div>
 
-        <div class="chapter" id="chapter2">
-            <h2>第 2 章: 头文件化 + 单元测试</h2>
-            <p>将核心逻辑封装成头文件，并添加单元测试确保正确性。</p>
-            
-            <div class="filename">rpn_engine.hpp</div>
-            <pre><code>#pragma once
+            <div class="chapter" id="chapter2">
+                <h2>第 2 章: 头文件化 + 单元测试</h2>
+                <p>将核心逻辑封装成头文件，并添加单元测试确保正确性。</p>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-filename">rpn_engine.hpp</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制代码</button>
+                    </div>
+                    <pre><code class="language-cpp">#pragma once
 
 #include &lt;stack&gt;
 #include &lt;sstream&gt;
@@ -454,7 +523,6 @@ public:
         std::string token;
         
         while (iss &gt;&gt; token) {
-            // 检查是否为运算符
             if (is_operator(token)) {
                 if (stack.size() &lt; 2) {
                     throw std::runtime_error("Insufficient operands");
@@ -462,10 +530,8 @@ public:
                 
                 double b = stack.top(); stack.pop();
                 double a = stack.top(); stack.pop();
-                
                 apply_operator(stack, token, a, b);
             } 
-            // 检查是否为函数
             else if (is_function(token)) {
                 if (stack.empty()) {
                     throw std::runtime_error("No operand for function");
@@ -475,7 +541,6 @@ public:
                 apply_function(stack, token, a);
             }
             else {
-                // 作为数字处理
                 try {
                     stack.push(std::stod(token));
                 } catch (const std::invalid_argument&) {
@@ -531,83 +596,19 @@ private:
         }
     }
 };</code></pre>
-            
-            <div class="filename">test.cpp</div>
-            <pre><code>#include &lt;iostream&gt;
-#include &lt;cassert&gt;
-#include "rpn_engine.hpp"
+                </div>
+            </div>
 
-void test_basic_operations() {
-    std::cout &lt;&lt; "Testing basic operations...\n";
-    
-    assert(RPNEngine::evaluate("3 4 +") == 7);
-    assert(RPNEngine::evaluate("10 3 -") == 7);
-    assert(RPNEngine::evaluate("4 5 *") == 20);
-    assert(RPNEngine::evaluate("20 4 /") == 5);
-    
-    std::cout &lt;&lt; "Basic operations: PASS\n";
-}
-
-void test_complex_expressions() {
-    std::cout &lt;&lt; "Testing complex expressions...\n";
-    
-    assert(RPNEngine::evaluate("3 4 + 5 *") == 35);  // (3+4)*5
-    assert(RPNEngine::evaluate("2 3 ^ 4 +") == 12);  // 2^3 + 4
-    
-    std::cout &lt;&lt; "Complex expressions: PASS\n";
-}
-
-void test_functions() {
-    std::cout &lt;&lt; "Testing functions...\n";
-    
-    assert(std::abs(RPNEngine::evaluate("9 sqrt") - 3.0) < 0.0001);
-    assert(std::abs(RPNEngine::evaluate("0 sin")) < 0.0001);
-    
-    std::cout &lt;&lt; "Functions: PASS\n";
-}
-
-void test_error_handling() {
-    std::cout &lt;&lt; "Testing error handling...\n";
-    
-    try {
-        RPNEngine::evaluate("1 0 /");
-        assert(false);  // Should not reach here
-    } catch (const std::exception& e) {
-        std::cout &lt;&lt; "Division by zero caught: " &lt;&lt; e.what() &lt;&lt; "\n";
-    }
-    
-    try {
-        RPNEngine::evaluate("+");
-        assert(false);
-    } catch (const std::exception& e) {
-        std::cout &lt;&lt; "Insufficient operands caught: " &lt;&lt; e.what() &lt;&lt; "\n";
-    }
-    
-    std::cout &lt;&lt; "Error handling: PASS\n";
-}
-
-int main() {
-    std::cout &lt;&lt; "Running RPN Engine Tests\n";
-    std::cout &lt;&lt; "=======================\n";
-    
-    test_basic_operations();
-    test_complex_expressions();
-    test_functions();
-    test_error_handling();
-    
-    std::cout &lt;&lt; "\nAll tests passed! ✅\n";
-    return 0;
-}</code></pre>
-            
-            <div class="console">g++ -std=c++17 -o test test.cpp && ./test</div>
-        </div>
-
-        <div class="chapter" id="chapter3">
-            <h2>第 3 章: 交互式 REPL</h2>
-            <p>实现一个完整的交互式计算器，支持历史记录和命令补全。</p>
-            
-            <div class="filename">repl.cpp</div>
-            <pre><code>#include "rpn_engine.hpp"
+            <div class="chapter" id="chapter3">
+                <h2>第 3 章: 交互式 REPL</h2>
+                <p>实现一个完整的交互式计算器，支持历史记录和命令补全。</p>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-filename">repl.cpp</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制代码</button>
+                    </div>
+                    <pre><code class="language-cpp">#include "rpn_engine.hpp"
 #include &lt;iostream&gt;
 #include &lt;iomanip&gt;
 #include &lt;vector&gt;
@@ -653,13 +654,11 @@ public:
             std::cout &lt;&lt; "rpn&gt; ";
             if (!std::getline(std::cin, line)) break;
             
-            // Trim whitespace
             line.erase(0, line.find_first_not_of(" \t\n\r"));
             line.erase(line.find_last_not_of(" \t\n\r") + 1);
             
             if (line.empty()) continue;
             
-            // Check for commands
             if (line == "quit" || line == "exit") {
                 std::cout &lt;&lt; "Goodbye!\n";
                 break;
@@ -670,12 +669,10 @@ public:
                 print_history();
                 continue;
             } else if (line == "clear") {
-                // Simple clear by printing newlines
                 for (int i = 0; i &lt; 50; ++i) std::cout &lt;&lt; "\n";
                 continue;
             }
             
-            // Evaluate expression
             try {
                 double result = RPNEngine::evaluate(line);
                 std::cout &lt;&lt; "= " &lt;&lt; std::setprecision(12) &lt;&lt; result &lt;&lt; "\n";
@@ -692,111 +689,95 @@ int main() {
     repl.run();
     return 0;
 }</code></pre>
-            
-            <div class="console">g++ -std=c++17 -o repl repl.cpp rpn_engine.hpp && ./repl</div>
-            
-            <div class="note">
-                <div class="note-title">✨ REPL 特性</div>
-                <ul>
-                    <li>支持历史记录查看</li>
-                    <li>内置帮助系统</li>
-                    <li>完整的错误处理</li>
-                    <li>支持所有数学函数</li>
-                </ul>
+                </div>
             </div>
-        </div>
 
-        <div class="chapter" id="chapter4">
-            <h2>第 4 章: 单文件发布 & 交叉编译</h2>
-            <p>将整个项目打包成单个文件，并支持跨平台编译。</p>
-            
-            <div class="filename">rpn_single.cpp</div>
-            <pre><code>// Single-file RPN Calculator
-// Compile: g++ -std=c++17 -O3 -o rpn rpn_single.cpp
-
-#include &lt;iostream&gt;
-#include &lt;sstream&gt;
-#include &lt;stack&gt;
-#include &lt;string&gt;
-#include &lt;stdexcept&gt;
-#include &lt;cmath&gt;
-#include &lt;vector&gt;
-#include &lt;iomanip&gt;
-
-class RPNCalculator {
-    // ... (包含前面所有的实现代码)
-    // 这里为了简洁省略具体实现，实际文件会包含完整代码
-};
-
-int main() {
-    // ... (包含 REPL 的完整实现)
-}</code></pre>
-            
-            <h3>编译优化</h3>
-            <div class="console"># Linux/macOS
-g++ -std=c++17 -O3 -o rpn_linux rpn_single.cpp
-strip rpn_linux
-
-# Windows (MinGW交叉编译)
-x86_64-w64-mingw32-g++ -std=c++17 -O3 -o rpn.exe rpn_single.cpp
-upx --best rpn.exe  # 进一步压缩</div>
-            
-            <div class="note">
-                <div class="note-title">📦 发布文件大小</div>
+            <div class="chapter" id="chapter4">
+                <h2>第 4 章: 单文件发布 & 交叉编译</h2>
+                <p>将整个项目打包成单个文件，并支持跨平台编译。</p>
+                
                 <table>
-                    <tr><th>平台</th><th>优化级别</th><th>文件大小</th></tr>
-                    <tr><td>Linux (gcc)</td><td>-O3 + strip</td><td>~92 KB</td></tr>
-                    <tr><td>Windows (MinGW)</td><td>-O3 + UPX</td><td>~48 KB</td></tr>
-                    <tr><td>macOS (clang)</td><td>-O3 + strip</td><td>~85 KB</td></tr>
+                    <tr>
+                        <th>平台</th>
+                        <th>编译命令</th>
+                        <th>文件大小</th>
+                    </tr>
+                    <tr>
+                        <td>Linux/macOS</td>
+                        <td><code>g++ -std=c++17 -O3 -o rpn rpn_single.cpp</code></td>
+                        <td>~92 KB</td>
+                    </tr>
+                    <tr>
+                        <td>Windows (MinGW)</td>
+                        <td><code>x86_64-w64-mingw32-g++ -std=c++17 -O3 -o rpn.exe rpn_single.cpp</code></td>
+                        <td>~85 KB</td>
+                    </tr>
                 </table>
-            </div>
-        </div>
+                
+                <div class="console"># 下载完整项目
+git clone https://github.com/sonya-lzy/rpn_calc.git
+cd rpn_calc
 
-        <div class="chapter" id="chapter5">
-            <h2>第 5 章: 扩展功能与挑战</h2>
-            
-            <div class="challenge">
-                <div class="challenge-title">🚀 扩展挑战</div>
-                <ol>
-                    <li><span class="highlight">复数支持</span>：扩展支持复数运算</li>
-                    <li><span class="highlight">变量存储</span>：实现变量赋值和使用</li>
-                    <li><span class="highlight">脚本模式</span>：支持从文件读取表达式</li>
-                    <li><span class="highlight">图形界面</span>：使用 Qt 或 ImGUI 添加 GUI</li>
-                    <li><span class="highlight">网络计算</span>：实现客户端-服务器模式</li>
-                </ol>
+# 编译并运行
+g++ -std=c++17 -o rpn src/rpn_calc.cpp
+./rpn</div>
             </div>
-            
-            <h3>实现示例：变量支持</h3>
-            <pre><code>// 扩展 RPNEngine 支持变量
-class RPNEngineWithVars : public RPNEngine {
-private:
-    std::map&lt;std::string, double&gt; variables;
-    
-    void set_variable(const std::string& name, double value) {
-        variables[name] = value;
-    }
-    
-    double get_variable(const std::string& name) {
-        if (variables.find(name) == variables.end()) {
-            throw std::runtime_error("Undefined variable: " + name);
-        }
-        return variables[name];
-    }
-};</code></pre>
-            
-            <h3>项目链接</h3>
-            <p>
-                <a href="https://github.com/sonya-lzy/rpn_calc" class="button" target="_blank">📂 查看 GitHub 仓库</a>
-            </p>
-        </div>
 
-        <footer>
-            <p>© 2024 RPN Calculator Project | 
-                <a href="https://sonya-lzy.github.io/rpn_calc/rpn_manual.html" target="_blank">在线文档</a> | 
-                <a href="https://github.com/sonya-lzy/rpn_calc" target="_blank">源代码</a>
-            </p>
-            <p>本教程采用 C++17 标准编写，支持跨平台编译运行。</p>
-        </footer>
+            <div class="chapter" id="chapter5">
+                <h2>第 5 章: 扩展功能与挑战</h2>
+                
+                <div class="challenge">
+                    <div class="challenge-title">扩展挑战</div>
+                    <ol>
+                        <li><span class="highlight">复数支持</span>：扩展支持复数运算</li>
+                        <li><span class="highlight">变量存储</span>：实现变量赋值和使用</li>
+                        <li><span class="highlight">脚本模式</span>：支持从文件读取表达式</li>
+                        <li><span class="highlight">图形界面</span>：使用 Qt 或 ImGUI 添加 GUI</li>
+                        <li><span class="highlight">网络计算</span>：实现客户端-服务器模式</li>
+                    </ol>
+                </div>
+                
+                <p style="text-align: center; margin-top: 30px;">
+                    <a href="https://github.com/sonya-lzy/rpn_calc" class="button" target="_blank">查看 GitHub 仓库</a>
+                    <a href="https://sonya-lzy.github.io/rpn_calc/" class="button" target="_blank">访问在线文档</a>
+                </p>
+            </div>
+
+            <footer>
+                <p>© 2024 RPN Calculator Project | C++ 编程作业</p>
+                <p>GitHub: <a href="https://github.com/sonya-lzy/rpn_calc">sonya-lzy/rpn_calc</a></p>
+                <p>文档: <a href="https://sonya-lzy.github.io/rpn_calc/rpn_manual.html">在线查看</a></p>
+            </footer>
+        </div>
     </div>
+
+    <script>
+        // 复制代码功能
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block').querySelector('code');
+            const text = codeBlock.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = '已复制!';
+                button.style.background = '#27ae60';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+            });
+        }
+        
+        // 语法高亮
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof Prism !== 'undefined') {
+                Prism.highlightAll();
+            }
+        });
+    </script>
 </body>
 </html>
+HTML
