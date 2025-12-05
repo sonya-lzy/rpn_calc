@@ -507,7 +507,4 @@ nbText: fmt"""
 </p>
 """
 
-# 保存文档
-nbsave()
-
-echo "✅ Nimib文档已生成: rpn_manual.html"
+nbSave
