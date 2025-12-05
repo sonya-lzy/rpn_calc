@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <title>现代 C++ 手把手实现 RPN 计算器</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🐳</text></svg>">
+  <meta content="text/html; charset=utf-8" http-equiv="content-type">
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <meta content="nimib 0.3.12" name="generator">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/light.min.css">
+  <link rel='stylesheet' href='https://cdn.jsdelivr.net/gh/pietroppeter/nimib/assets/atom-one-light.css'>
+    <script src="https://cdn.jsdelivr.net/gh/pietroppeter/nimib@main/assets/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+.nb-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nb-small {
+  font-size: 0.8rem;
+}
+button.nb-small {
+  float: right;
+  padding: 2px;
+  padding-right: 5px;
+  padding-left: 5px;
+}
+section#source {
+  display:none
+}
+pre > code {
+  font-size: 1.2em;
+}
+.nb-output {
+  line-height: 1.15;
+}
+figure {
+  margin: 2rem 0;
+}
+figcaption {
+  text-align: center;
+}
+  
+</style>
+  
+</head>
+<body>
+<header>
+<div class="nb-box">
+  <span><a href=".">🏡</a></span>
+  <span><code>rpn_tutorial.nim</code></span>
+  <span><a href="https://github.com/sonya-lzy/rpn_calc"><svg aria-hidden="true" width="1.2em" height="1.2em" style="vertical-align: middle;" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59c.4.07.55-.17.55-.38c0-.19-.01-.82-.01-1.49c-2.01.37-2.53-.49-2.69-.94c-.09-.23-.48-.94-.82-1.13c-.28-.15-.68-.52-.01-.53c.63-.01 1.08.58 1.23.82c.72 1.21 1.87.87 2.33.66c.07-.52.28-.87.51-1.07c-1.78-.2-3.64-.89-3.64-3.95c0-.87.31-1.59.82-2.15c-.08-.2-.36-1.02.08-2.12c0 0 .67-.21 2.2.82c.64-.18 1.32-.27 2-.27c.68 0 1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82c.44 1.1.16 1.92.08 2.12c.51.56.82 1.27.82 2.15c0 3.07-1.87 3.75-3.65 3.95c.29.25.54.73.54 1.48c0 1.07-.01 1.93-.01 2.2c0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" fill="#000"></path></svg></a></span>
+</div>
+<hr>
+</header><main>
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+    line-height: 1.6;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #333;
+}
+h1, h2, h3 {
+    color: #2c3e50;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+}
+pre {
+    background: #f8f9fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 4px;
+    padding: 16px;
+    overflow-x: auto;
+}
+code {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+.meta {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+    color: #666;
+    font-size: 0.9em;
+}
+.toc {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 30px 0;
+}
+.chapter {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 30px;
+    margin-bottom: 30px;
+}
+.chapter:last-child {
+    border-bottom: none;
+}
+.filename {
+    background: #2c3e50;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 4px 4px 0 0;
+    font-family: 'SF Mono', monospace;
+    font-size: 0.9em;
+}
+.console {
+    background: #1a1a1a;
+    color: #00ff9d;
+    padding: 15px;
+    border-radius: 4px;
+    font-family: 'SF Mono', monospace;
+    margin: 15px 0;
+}
+.console::before {
+    content: "$ ";
+}
+.note {
+    background: #e8f4fd;
+    border-left: 4px solid #3498db;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 0 4px 4px 0;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+th {
+    background: #f2f2f2;
+}
+.badge {
+    display: inline-block;
+    background: #3498db;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+</style>
+<h1>现代 C++ 手把手实现 RPN 计算器</h1>
+<p><strong>从零开始实现一个完整的逆波兰表示法计算器</strong></p>
+<div class="meta">
+    <div><strong>版本:</strong> 1.0</div>
+    <div><strong>编译器:</strong> GCC 10+/Clang 12+/MSVC 2019+</div>
+    <div><strong>标准:</strong> C++17</div>
+</div>
+<div>
+    <span class="badge">RPN</span>
+    <span class="badge">C++17</span>
+    <span class="badge">STL</span>
+    <span class="badge">算法</span>
+    <span class="badge">命令行</span>
+    <span class="badge">开源</span>
+</div>
+<div class="toc">
+    <h2>目录</h2>
+    <ol>
+        <li><a href="#chapter1">第 1 章: Hello RPN</a></li>
+        <li><a href="#chapter2">第 2 章: 头文件化 + 单元测试</a></li>
+        <li><a href="#chapter3">第 3 章: 交互式 REPL</a></li>
+        <li><a href="#chapter4">第 4 章: 单文件发布 & 交叉编译</a></li>
+        <li><a href="#chapter5">第 5 章: 扩展功能与挑战</a></li>
+    </ol>
+</div>
+<div class="chapter" id="chapter1">
+    <h2>第 1 章: Hello RPN</h2>
+    
+    <p>我们先从一个最小可运行的 RPN 计算器开始，理解逆波兰表示法的核心思想。</p>
+    
+    <div class="note">
+        <p><strong>RPN 简介</strong></p>
+        <p>逆波兰表示法（Reverse Polish Notation）是一种不需要括号的数学表达式表示法，所有运算符都跟在操作数后面。</p>
+        <p>示例：<code>3 4 +</code> 表示 <code>3 + 4</code>，<code>3 4 + 5 *</code> 表示 <code>(3 + 4) * 5</code></p>
+    </div>
+</div>
+<div class="filename">rpn_min.cpp</div>
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;&quot;&quot;#include &lt;iostream&gt;
+#include &lt;sstream&gt;
+#include &lt;stack&gt;
+#include &lt;string&gt;
+#include &lt;stdexcept&gt;
+
+double rpn_evaluate(const std::string&amp; expression) {
+    std::stack&lt;double&gt; stack;
+    std::istringstream iss(expression);
+    std::string token;
+    
+    while (iss &gt;&gt; token) {
+        if (token.size() == 1 &amp;&amp; std::string(&quot;+-*/&quot;).find(token[0]) != std::string::npos) {
+            if (stack.size() &lt; 2) {
+                throw std::runtime_error(&quot;Error: insufficient operands&quot;);
+            }
+            
+            double b = stack.top(); stack.pop();
+            double a = stack.top(); stack.pop();
+            
+            switch (token[0]) {
+                case '+': stack.push(a + b); break;
+                case '-': stack.push(a - b); break;
+                case '*': stack.push(a * b); break;
+                case '/': 
+                    if (b == 0) throw std::runtime_error(&quot;Error: division by zero&quot;);
+                    stack.push(a / b); 
+                    break;
+            }
+        } else {
+            try {
+                stack.push(std::stod(token));
+            } catch (const std::invalid_argument&amp;) {
+                throw std::runtime_error(&quot;Error: invalid token '&quot; + token + &quot;'&quot;);
+            }
+        }
+    }
+    
+    if (stack.size() != 1) {
+        throw std::runtime_error(&quot;Error: expression invalid&quot;);
+    }
+    
+    return stack.top();
+}
+
+int main() {
+    std::string expression;
+    std::cout &lt;&lt; &quot;Enter RPN expression: &quot;;
+    std::getline(std::cin, expression);
+    
+    try {
+        double result = rpn_evaluate(expression);
+        std::cout &lt;&lt; &quot;Result: &quot; &lt;&lt; result &lt;&lt; std::endl;
+    } catch (const std::exception&amp; e) {
+        std::cerr &lt;&lt; e.what() &lt;&lt; std::endl;
+        return 1;
+    }
+    
+    return 0;
+}&quot;&quot;&quot;</span></code></pre><pre class="nb-output">#include &lt;iostream&gt;
+#include &lt;sstream&gt;
+#include &lt;stack&gt;
+#include &lt;string&gt;
+#include &lt;stdexcept&gt;
+
+double rpn_evaluate(const std::string&amp; expression) {
+    std::stack&lt;double&gt; stack;
+    std::istringstream iss(expression);
+    std::string token;
+    
+    while (iss &gt;&gt; token) {
+        if (token.size() == 1 &amp;&amp; std::string(&quot;+-*/&quot;).find(token[0]) != std::string::npos) {
+            if (stack.size() &lt; 2) {
+                throw std::runtime_error(&quot;Error: insufficient operands&quot;);
+            }
+            
+            double b = stack.top(); stack.pop();
+            double a = stack.top(); stack.pop();
+            
+            switch (token[0]) {
+                case '+': stack.push(a + b); break;
+                case '-': stack.push(a - b); break;
+                case '*': stack.push(a * b); break;
+                case '/': 
+                    if (b == 0) throw std::runtime_error(&quot;Error: division by zero&quot;);
+                    stack.push(a / b); 
+                    break;
+            }
+        } else {
+            try {
+                stack.push(std::stod(token));
+            } catch (const std::invalid_argument&amp;) {
+                throw std::runtime_error(&quot;Error: invalid token '&quot; + token + &quot;'&quot;);
+            }
+        }
+    }
+    
+    if (stack.size() != 1) {
+        throw std::runtime_error(&quot;Error: expression invalid&quot;);
+    }
+    
+    return stack.top();
+}
+
+int main() {
+    std::string expression;
+    std::cout &lt;&lt; &quot;Enter RPN expression: &quot;;
+    std::getline(std::cin, expression);
+    
+    try {
+        double result = rpn_evaluate(expression);
+        std::cout &lt;&lt; &quot;Result: &quot; &lt;&lt; result &lt;&lt; std::endl;
+    } catch (const std::exception&amp; e) {
+        std::cerr &lt;&lt; e.what() &lt;&lt; std::endl;
+        return 1;
+    }
+    
+    return 0;
+}</pre>
+<div class="console">g++ -std=c++17 -o rpn_min rpn_min.cpp && ./rpn_min</div>
+<div class="note">
+    <p><strong>本章要点</strong></p>
+    <ul>
+        <li>理解 RPN 的基本原理</li>
+        <li>使用 <code>std::stack</code> 实现计算</li>
+        <li>基本的错误处理机制</li>
+    </ul>
+</div>
+<div class="chapter" id="chapter2">
+    <h2>第 2 章: 头文件化 + 单元测试</h2>
+    
+    <p>将核心逻辑封装成头文件，并添加单元测试确保正确性。</p>
+</div>
+<div class="filename">rpn_engine.hpp</div>
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;&quot;&quot;#pragma once
+
+#include &lt;stack&gt;
+#include &lt;sstream&gt;
+#include &lt;string&gt;
+#include &lt;stdexcept&gt;
+#include &lt;cmath&gt;
+
+class RPNEngine {
+public:
+    static double evaluate(const std::string&amp; expression) {
+        std::stack&lt;double&gt; stack;
+        std::istringstream iss(expression);
+        std::string token;
+        
+        while (iss &gt;&gt; token) {
+            if (is_operator(token)) {
+                if (stack.size() &lt; 2) {
+                    throw std::runtime_error(&quot;Insufficient operands&quot;);
+                }
+                
+                double b = stack.top(); stack.pop();
+                double a = stack.top(); stack.pop();
+                apply_operator(stack, token, a, b);
+            } 
+            else if (is_function(token)) {
+                if (stack.empty()) {
+                    throw std::runtime_error(&quot;No operand for function&quot;);
+                }
+                
+                double a = stack.top(); stack.pop();
+                apply_function(stack, token, a);
+            }
+            else {
+                try {
+                    stack.push(std::stod(token));
+                } catch (const std::invalid_argument&amp;) {
+                    throw std::runtime_error(&quot;Invalid token: &quot; + token);
+                }
+            }
+        }
+        
+        if (stack.size() != 1) {
+            throw std::runtime_error(&quot;Invalid expression&quot;);
+        }
+        
+        return stack.top();
+    }
+
+private:
+    static bool is_operator(const std::string&amp; token) {
+        if (token.size() != 1) return false;
+        char op = token[0];
+        return op == '+' || op == '-' || op == '*' || op == '/' || op == '^';
+    }
+    
+    static bool is_function(const std::string&amp; token) {
+        return token == &quot;sqrt&quot; || token == &quot;sin&quot; || token == &quot;cos&quot; || token == &quot;log&quot;;
+    }
+    
+    static void apply_operator(std::stack&lt;double&gt;&amp; stack, const std::string&amp; op, 
+                              double a, double b) {
+        switch (op[0]) {
+            case '+': stack.push(a + b); break;
+            case '-': stack.push(a - b); break;
+            case '*': stack.push(a * b); break;
+            case '/': 
+                if (b == 0) throw std::runtime_error(&quot;Division by zero&quot;);
+                stack.push(a / b); 
+                break;
+            case '^': stack.push(std::pow(a, b)); break;
+        }
+    }
+    
+    static void apply_function(std::stack&lt;double&gt;&amp; stack, const std::string&amp; func, 
+                              double a) {
+        if (func == &quot;sqrt&quot;) {
+            if (a &lt; 0) throw std::runtime_error(&quot;Square root of negative number&quot;);
+            stack.push(std::sqrt(a));
+        } else if (func == &quot;sin&quot;) {
+            stack.push(std::sin(a));
+        } else if (func == &quot;cos&quot;) {
+            stack.push(std::cos(a));
+        } else if (func == &quot;log&quot;) {
+            if (a &lt;= 0) throw std::runtime_error(&quot;Logarithm of non-positive number&quot;);
+            stack.push(std::log(a));
+        }
+    }
+};&quot;&quot;&quot;</span></code></pre><pre class="nb-output">#pragma once
+
+#include &lt;stack&gt;
+#include &lt;sstream&gt;
+#include &lt;string&gt;
+#include &lt;stdexcept&gt;
+#include &lt;cmath&gt;
+
+class RPNEngine {
+public:
+    static double evaluate(const std::string&amp; expression) {
+        std::stack&lt;double&gt; stack;
+        std::istringstream iss(expression);
+        std::string token;
+        
+        while (iss &gt;&gt; token) {
+            if (is_operator(token)) {
+                if (stack.size() &lt; 2) {
+                    throw std::runtime_error(&quot;Insufficient operands&quot;);
+                }
+                
+                double b = stack.top(); stack.pop();
+                double a = stack.top(); stack.pop();
+                apply_operator(stack, token, a, b);
+            } 
+            else if (is_function(token)) {
+                if (stack.empty()) {
+                    throw std::runtime_error(&quot;No operand for function&quot;);
+                }
+                
+                double a = stack.top(); stack.pop();
+                apply_function(stack, token, a);
+            }
+            else {
+                try {
+                    stack.push(std::stod(token));
+                } catch (const std::invalid_argument&amp;) {
+                    throw std::runtime_error(&quot;Invalid token: &quot; + token);
+                }
+            }
+        }
+        
+        if (stack.size() != 1) {
+            throw std::runtime_error(&quot;Invalid expression&quot;);
+        }
+        
+        return stack.top();
+    }
+
+private:
+    static bool is_operator(const std::string&amp; token) {
+        if (token.size() != 1) return false;
+        char op = token[0];
+        return op == '+' || op == '-' || op == '*' || op == '/' || op == '^';
+    }
+    
+    static bool is_function(const std::string&amp; token) {
+        return token == &quot;sqrt&quot; || token == &quot;sin&quot; || token == &quot;cos&quot; || token == &quot;log&quot;;
+    }
+    
+    static void apply_operator(std::stack&lt;double&gt;&amp; stack, const std::string&amp; op, 
+                              double a, double b) {
+        switch (op[0]) {
+            case '+': stack.push(a + b); break;
+            case '-': stack.push(a - b); break;
+            case '*': stack.push(a * b); break;
+            case '/': 
+                if (b == 0) throw std::runtime_error(&quot;Division by zero&quot;);
+                stack.push(a / b); 
+                break;
+            case '^': stack.push(std::pow(a, b)); break;
+        }
+    }
+    
+    static void apply_function(std::stack&lt;double&gt;&amp; stack, const std::string&amp; func, 
+                              double a) {
+        if (func == &quot;sqrt&quot;) {
+            if (a &lt; 0) throw std::runtime_error(&quot;Square root of negative number&quot;);
+            stack.push(std::sqrt(a));
+        } else if (func == &quot;sin&quot;) {
+            stack.push(std::sin(a));
+        } else if (func == &quot;cos&quot;) {
+            stack.push(std::cos(a));
+        } else if (func == &quot;log&quot;) {
+            if (a &lt;= 0) throw std::runtime_error(&quot;Logarithm of non-positive number&quot;);
+            stack.push(std::log(a));
+        }
+    }
+};</pre>
+<div class="chapter" id="chapter3">
+    <h2>第 3 章: 交互式 REPL</h2>
+    
+    <p>实现一个完整的交互式计算器，支持历史记录和命令补全。</p>
+</div>
+<div class="filename">repl.cpp</div>
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;&quot;&quot;#include &quot;rpn_engine.hpp&quot;
+#include &lt;iostream&gt;
+#include &lt;iomanip&gt;
+#include &lt;vector&gt;
+#include &lt;string&gt;
+
+class REPL {
+private:
+    std::vector&lt;std::string&gt; history;
+    
+    void print_help() {
+        std::cout &lt;&lt; &quot;\n=== RPN Calculator Commands ===\n&quot;;
+        std::cout &lt;&lt; &quot;  &lt;expression&gt;    Evaluate RPN expression\n&quot;;
+        std::cout &lt;&lt; &quot;  help            Show this help message\n&quot;;
+        std::cout &lt;&lt; &quot;  history         Show calculation history\n&quot;;
+        std::cout &lt;&lt; &quot;  clear           Clear the screen\n&quot;;
+        std::cout &lt;&lt; &quot;  quit / exit     Exit the program\n&quot;;
+        std::cout &lt;&lt; &quot;\nOperators: + - * / ^\n&quot;;
+        std::cout &lt;&lt; &quot;Functions: sqrt sin cos log\n&quot;;
+        std::cout &lt;&lt; &quot;Example: '5 5 + 3 *' =&gt; 30\n&quot;;
+        std::cout &lt;&lt; &quot;==============================\n&quot;;
+    }
+    
+    void print_history() {
+        if (history.empty()) {
+            std::cout &lt;&lt; &quot;No history yet.\n&quot;;
+            return;
+        }
+        
+        std::cout &lt;&lt; &quot;\n=== Calculation History ===\n&quot;;
+        for (size_t i = 0; i &lt; history.size(); ++i) {
+            std::cout &lt;&lt; i + 1 &lt;&lt; &quot;. &quot; &lt;&lt; history[i] &lt;&lt; &quot;\n&quot;;
+        }
+        std::cout &lt;&lt; &quot;===========================\n&quot;;
+    }
+
+public:
+    void run() {
+        std::cout &lt;&lt; &quot;RPN Calculator REPL (Type 'help' for commands)\n&quot;;
+        std::cout &lt;&lt; &quot;==============================================\n\n&quot;;
+        
+        std::string line;
+        while (true) {
+            std::cout &lt;&lt; &quot;rpn&gt; &quot;;
+            if (!std::getline(std::cin, line)) break;
+            
+            line.erase(0, line.find_first_not_of(&quot; \t\n\r&quot;));
+            line.erase(line.find_last_not_of(&quot; \t\n\r&quot;) + 1);
+            
+            if (line.empty()) continue;
+            
+            if (line == &quot;quit&quot; || line == &quot;exit&quot;) {
+                std::cout &lt;&lt; &quot;Goodbye!\n&quot;;
+                break;
+            } else if (line == &quot;help&quot;) {
+                print_help();
+                continue;
+            } else if (line == &quot;history&quot;) {
+                print_history();
+                continue;
+            } else if (line == &quot;clear&quot;) {
+                for (int i = 0; i &lt; 50; ++i) std::cout &lt;&lt; &quot;\n&quot;;
+                continue;
+            }
+            
+            try {
+                double result = RPNEngine::evaluate(line);
+                std::cout &lt;&lt; &quot;= &quot; &lt;&lt; std::setprecision(12) &lt;&lt; result &lt;&lt; &quot;\n&quot;;
+                history.push_back(line + &quot; =&gt; &quot; + std::to_string(result));
+            } catch (const std::exception&amp; e) {
+                std::cout &lt;&lt; &quot;Error: &quot; &lt;&lt; e.what() &lt;&lt; &quot;\n&quot;;
+            }
+        }
+    }
+};
+
+int main() {
+    REPL repl;
+    repl.run();
+    return 0;
+}&quot;&quot;&quot;</span></code></pre><pre class="nb-output">#include &quot;rpn_engine.hpp&quot;
+#include &lt;iostream&gt;
+#include &lt;iomanip&gt;
+#include &lt;vector&gt;
+#include &lt;string&gt;
+
+class REPL {
+private:
+    std::vector&lt;std::string&gt; history;
+    
+    void print_help() {
+        std::cout &lt;&lt; &quot;\n=== RPN Calculator Commands ===\n&quot;;
+        std::cout &lt;&lt; &quot;  &lt;expression&gt;    Evaluate RPN expression\n&quot;;
+        std::cout &lt;&lt; &quot;  help            Show this help message\n&quot;;
+        std::cout &lt;&lt; &quot;  history         Show calculation history\n&quot;;
+        std::cout &lt;&lt; &quot;  clear           Clear the screen\n&quot;;
+        std::cout &lt;&lt; &quot;  quit / exit     Exit the program\n&quot;;
+        std::cout &lt;&lt; &quot;\nOperators: + - * / ^\n&quot;;
+        std::cout &lt;&lt; &quot;Functions: sqrt sin cos log\n&quot;;
+        std::cout &lt;&lt; &quot;Example: '5 5 + 3 *' =&gt; 30\n&quot;;
+        std::cout &lt;&lt; &quot;==============================\n&quot;;
+    }
+    
+    void print_history() {
+        if (history.empty()) {
+            std::cout &lt;&lt; &quot;No history yet.\n&quot;;
+            return;
+        }
+        
+        std::cout &lt;&lt; &quot;\n=== Calculation History ===\n&quot;;
+        for (size_t i = 0; i &lt; history.size(); ++i) {
+            std::cout &lt;&lt; i + 1 &lt;&lt; &quot;. &quot; &lt;&lt; history[i] &lt;&lt; &quot;\n&quot;;
+        }
+        std::cout &lt;&lt; &quot;===========================\n&quot;;
+    }
+
+public:
+    void run() {
+        std::cout &lt;&lt; &quot;RPN Calculator REPL (Type 'help' for commands)\n&quot;;
+        std::cout &lt;&lt; &quot;==============================================\n\n&quot;;
+        
+        std::string line;
+        while (true) {
+            std::cout &lt;&lt; &quot;rpn&gt; &quot;;
+            if (!std::getline(std::cin, line)) break;
+            
+            line.erase(0, line.find_first_not_of(&quot; \t\n\r&quot;));
+            line.erase(line.find_last_not_of(&quot; \t\n\r&quot;) + 1);
+            
+            if (line.empty()) continue;
+            
+            if (line == &quot;quit&quot; || line == &quot;exit&quot;) {
+                std::cout &lt;&lt; &quot;Goodbye!\n&quot;;
+                break;
+            } else if (line == &quot;help&quot;) {
+                print_help();
+                continue;
+            } else if (line == &quot;history&quot;) {
+                print_history();
+                continue;
+            } else if (line == &quot;clear&quot;) {
+                for (int i = 0; i &lt; 50; ++i) std::cout &lt;&lt; &quot;\n&quot;;
+                continue;
+            }
+            
+            try {
+                double result = RPNEngine::evaluate(line);
+                std::cout &lt;&lt; &quot;= &quot; &lt;&lt; std::setprecision(12) &lt;&lt; result &lt;&lt; &quot;\n&quot;;
+                history.push_back(line + &quot; =&gt; &quot; + std::to_string(result));
+            } catch (const std::exception&amp; e) {
+                std::cout &lt;&lt; &quot;Error: &quot; &lt;&lt; e.what() &lt;&lt; &quot;\n&quot;;
+            }
+        }
+    }
+};
+
+int main() {
+    REPL repl;
+    repl.run();
+    return 0;
+}</pre>
+<div class="chapter" id="chapter4">
+    <h2>第 4 章: 单文件发布 & 交叉编译</h2>
+    
+    <p>将整个项目打包成单个文件，并支持跨平台编译。</p>
+<table>
+    <tr>
+        <th>平台</th>
+        <th>编译命令</th>
+        <th>文件大小</th>
+    </tr>
+    <tr>
+        <td>Linux/macOS</td>
+        <td><code>g++ -std=c++17 -O3 -o rpn rpn_single.cpp</code></td>
+        <td>~92 KB</td>
+    </tr>
+    <tr>
+        <td>Windows (MinGW)</td>
+        <td><code>x86_64-w64-mingw32-g++ -std=c++17 -O3 -o rpn.exe rpn_single.cpp</code></td>
+        <td>~85 KB</td>
+    </tr>
+</table>
+<div class="console"># 下载完整项目
+git clone https://github.com/sonya-lzy/rpn_calc.git
+cd rpn_calc
+<h1>编译并运行</h1>
+<p>g++ -std=c++17 -o rpn src/rpn_calc.cpp
+./rpn</div></p>
+<div class="chapter" id="chapter5">
+    <h2>第 5 章: 扩展功能与挑战</h2>
+    
+    <div class="note">
+        <p><strong>扩展挑战</strong></p>
+        <ol>
+            <li><strong>复数支持</strong>：扩展支持复数运算</li>
+            <li><strong>变量存储</strong>：实现变量赋值和使用</li>
+            <li><strong>脚本模式</strong>：支持从文件读取表达式</li>
+            <li><strong>图形界面</strong>：使用 Qt 或 ImGUI 添加 GUI</li>
+            <li><strong>网络计算</strong>：实现客户端-服务器模式</li>
+        </ol>
+    </div>
+    
+    <p>
+        <strong>GitHub 仓库:</strong> <a href="https://github.com/sonya-lzy/rpn_calc">https://github.com/sonya-lzy/rpn_calc</a><br>
+        <strong>在线文档:</strong> <a href="https://sonya-lzy.github.io/rpn_calc/rpn_manual.html">https://sonya-lzy.github.io/rpn_calc/rpn_manual.html</a>
+    </p>
+</div>
+<hr>
+<p style="text-align: center; color: #666; font-size: 0.9em;">
+    © 2024 RPN Calculator Project | C++ 编程作业<br>
+    生成时间: 2025-12-05 10:43:00
+</p>
+</main>
+<footer>
+<div class="nb-box">
+  <span><span class="nb-small">made with <a href="https://pietroppeter.github.io/nimib/">nimib 🐳</a></span></span>
+  <span></span>
+  <span><button class="nb-small" id="show" onclick="toggleSourceDisplay()">Show Source</button></span>
+</div>
+</footer>
+<section id="source">
+<pre><code class="nohighlight nim hljs"><span class="hljs-keyword">import</span> nimib
+<span class="hljs-keyword">import</span> std/[strutils, os, strformat]
+<span class="hljs-keyword">import</span> times  <span class="hljs-comment"># 添加这一行</span>
+
+<span class="hljs-comment"># 初始化Nimib</span>
+nbInit
+
+<span class="hljs-comment"># 设置文档元数据</span>
+nbDoc.context[<span class="hljs-string">&quot;title&quot;</span>] = <span class="hljs-string">&quot;现代 C++ 手把手实现 RPN 计算器&quot;</span>
+nbDoc.context[<span class="hljs-string">&quot;author&quot;</span>] = <span class="hljs-string">&quot;Your Name&quot;</span>
+nbDoc.context[<span class="hljs-string">&quot;description&quot;</span>] = <span class="hljs-string">&quot;从零开始实现一个完整的逆波兰表示法计算器&quot;</span>
+
+<span class="hljs-comment"># 添加自定义CSS样式</span>
+nbRawHtml: <span class="hljs-string">&quot;&quot;&quot;
+&lt;style&gt;
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+    line-height: 1.6;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #333;
+}
+h1, h2, h3 {
+    color: #2c3e50;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+}
+pre {
+    background: #f8f9fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 4px;
+    padding: 16px;
+    overflow-x: auto;
+}
+code {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+.meta {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+    color: #666;
+    font-size: 0.9em;
+}
+.toc {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 30px 0;
+}
+.chapter {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 30px;
+    margin-bottom: 30px;
+}
+.chapter:last-child {
+    border-bottom: none;
+}
+.filename {
+    background: #2c3e50;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 4px 4px 0 0;
+    font-family: 'SF Mono', monospace;
+    font-size: 0.9em;
+}
+.console {
+    background: #1a1a1a;
+    color: #00ff9d;
+    padding: 15px;
+    border-radius: 4px;
+    font-family: 'SF Mono', monospace;
+    margin: 15px 0;
+}
+.console::before {
+    content: &quot;$ &quot;;
+}
+.note {
+    background: #e8f4fd;
+    border-left: 4px solid #3498db;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 0 4px 4px 0;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+th {
+    background: #f2f2f2;
+}
+.badge {
+    display: inline-block;
+    background: #3498db;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+&lt;/style&gt;
+&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 文档标题和元数据</span>
+nbText: <span class="hljs-string">&quot;&quot;&quot;
+# 现代 C++ 手把手实现 RPN 计算器
+
+**从零开始实现一个完整的逆波兰表示法计算器**
+
+&lt;div class=&quot;meta&quot;&gt;
+    &lt;div&gt;&lt;strong&gt;版本:&lt;/strong&gt; 1.0&lt;/div&gt;
+    &lt;div&gt;&lt;strong&gt;编译器:&lt;/strong&gt; GCC 10+/Clang 12+/MSVC 2019+&lt;/div&gt;
+    &lt;div&gt;&lt;strong&gt;标准:&lt;/strong&gt; C++17&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div&gt;
+    &lt;span class=&quot;badge&quot;&gt;RPN&lt;/span&gt;
+    &lt;span class=&quot;badge&quot;&gt;C++17&lt;/span&gt;
+    &lt;span class=&quot;badge&quot;&gt;STL&lt;/span&gt;
+    &lt;span class=&quot;badge&quot;&gt;算法&lt;/span&gt;
+    &lt;span class=&quot;badge&quot;&gt;命令行&lt;/span&gt;
+    &lt;span class=&quot;badge&quot;&gt;开源&lt;/span&gt;
+&lt;/div&gt;
+&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 目录</span>
+nbText: <span class="hljs-string">&quot;&quot;&quot;
+&lt;div class=&quot;toc&quot;&gt;
+    &lt;h2&gt;目录&lt;/h2&gt;
+    &lt;ol&gt;
+        &lt;li&gt;&lt;a href=&quot;#chapter1&quot;&gt;第 1 章: Hello RPN&lt;/a&gt;&lt;/li&gt;
+        &lt;li&gt;&lt;a href=&quot;#chapter2&quot;&gt;第 2 章: 头文件化 + 单元测试&lt;/a&gt;&lt;/li&gt;
+        &lt;li&gt;&lt;a href=&quot;#chapter3&quot;&gt;第 3 章: 交互式 REPL&lt;/a&gt;&lt;/li&gt;
+        &lt;li&gt;&lt;a href=&quot;#chapter4&quot;&gt;第 4 章: 单文件发布 &amp; 交叉编译&lt;/a&gt;&lt;/li&gt;
+        &lt;li&gt;&lt;a href=&quot;#chapter5&quot;&gt;第 5 章: 扩展功能与挑战&lt;/a&gt;&lt;/li&gt;
+    &lt;/ol&gt;
+&lt;/div&gt;
+&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 第1章</span>
+nbText: <span class="hljs-string">&quot;&quot;&quot;
+&lt;div class=&quot;chapter&quot; id=&quot;chapter1&quot;&gt;
+    &lt;h2&gt;第 1 章: Hello RPN&lt;/h2&gt;
+    
+    &lt;p&gt;我们先从一个最小可运行的 RPN 计算器开始，理解逆波兰表示法的核心思想。&lt;/p&gt;
+    
+    &lt;div class=&quot;note&quot;&gt;
+        &lt;p&gt;&lt;strong&gt;RPN 简介&lt;/strong&gt;&lt;/p&gt;
+        &lt;p&gt;逆波兰表示法（Reverse Polish Notation）是一种不需要括号的数学表达式表示法，所有运算符都跟在操作数后面。&lt;/p&gt;
+        &lt;p&gt;示例：&lt;code&gt;3 4 +&lt;/code&gt; 表示 &lt;code&gt;3 + 4&lt;/code&gt;，&lt;code&gt;3 4 + 5 *&lt;/code&gt; 表示 &lt;code&gt;(3 + 4) * 5&lt;/code&gt;&lt;/p&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 添加代码块</span>
+nbText: <span class="hljs-string">&quot;&quot;&quot;&lt;div class=&quot;filename&quot;&gt;rpn_min.cpp&lt;/div&gt;&quot;&quot;&quot;</span>
+nbCode:
+  <span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;&quot;&quot;#include &lt;iostream&gt;
+#include &lt;sstream&gt;
+#include &lt;stack&gt;
+#include &lt;string&gt;
+#include &lt;stdexcept&gt;
+
+double rpn_evaluate(const std::string&amp; expression) {
+    std::stack&lt;double&gt; stack;
+    std::istringstream iss(expression);
+    std::string token;
+    
+    while (iss &gt;&gt; token) {
+        if (token.size() == 1 &amp;&amp; std::string(&quot;+-*/&quot;).find(token[0]) != std::string::npos) {
+            if (stack.size() &lt; 2) {
+                throw std::runtime_error(&quot;Error: insufficient operands&quot;);
+            }
+            
+            double b = stack.top(); stack.pop();
+            double a = stack.top(); stack.pop();
+            
+            switch (token[0]) {
+                case '+': stack.push(a + b); break;
+                case '-': stack.push(a - b); break;
+                case '*': stack.push(a * b); break;
+                case '/': 
+                    if (b == 0) throw std::runtime_error(&quot;Error: division by zero&quot;);
+                    stack.push(a / b); 
+                    break;
+            }
+        } else {
+            try {
+                stack.push(std::stod(token));
+            } catch (const std::invalid_argument&amp;) {
+                throw std::runtime_error(&quot;Error: invalid token '&quot; + token + &quot;'&quot;);
+            }
+        }
+    }
+    
+    if (stack.size() != 1) {
+        throw std::runtime_error(&quot;Error: expression invalid&quot;);
+    }
+    
+    return stack.top();
+}
+
+int main() {
+    std::string expression;
+    std::cout &lt;&lt; &quot;Enter RPN expression: &quot;;
+    std::getline(std::cin, expression);
+    
+    try {
+        double result = rpn_evaluate(expression);
+        std::cout &lt;&lt; &quot;Result: &quot; &lt;&lt; result &lt;&lt; std::endl;
+    } catch (const std::exception&amp; e) {
+        std::cerr &lt;&lt; e.what() &lt;&lt; std::endl;
+        return 1;
+    }
+    
+    return 0;
+}&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 编译命令</span>
+nbText: <span class="hljs-string">&quot;&quot;&quot;
+&lt;div class=&quot;console&quot;&gt;g++ -std=c++17 -o rpn_min rpn_min.cpp &amp;&amp; ./rpn_min&lt;/div&gt;
+
+&lt;div class=&quot;note&quot;&gt;
+    &lt;p&gt;&lt;strong&gt;本章要点&lt;/strong&gt;&lt;/p&gt;
+    &lt;ul&gt;
+        &lt;li&gt;理解 RPN 的基本原理&lt;/li&gt;
+        &lt;li&gt;使用 &lt;code&gt;std::stack&lt;/code&gt; 实现计算&lt;/li&gt;
+        &lt;li&gt;基本的错误处理机制&lt;/li&gt;
+    &lt;/ul&gt;
+&lt;/div&gt;
+&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 第2章</span>
+nbText: <span class="hljs-string">&quot;&quot;&quot;
+&lt;div class=&quot;chapter&quot; id=&quot;chapter2&quot;&gt;
+    &lt;h2&gt;第 2 章: 头文件化 + 单元测试&lt;/h2&gt;
+    
+    &lt;p&gt;将核心逻辑封装成头文件，并添加单元测试确保正确性。&lt;/p&gt;
+&lt;/div&gt;
+&quot;&quot;&quot;</span>
+
+nbText: <span class="hljs-string">&quot;&quot;&quot;&lt;div class=&quot;filename&quot;&gt;rpn_engine.hpp&lt;/div&gt;&quot;&quot;&quot;</span>
+nbCode:
+  <span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;&quot;&quot;#pragma once
+
+#include &lt;stack&gt;
+#include &lt;sstream&gt;
+#include &lt;string&gt;
+#include &lt;stdexcept&gt;
+#include &lt;cmath&gt;
+
+class RPNEngine {
+public:
+    static double evaluate(const std::string&amp; expression) {
+        std::stack&lt;double&gt; stack;
+        std::istringstream iss(expression);
+        std::string token;
+        
+        while (iss &gt;&gt; token) {
+            if (is_operator(token)) {
+                if (stack.size() &lt; 2) {
+                    throw std::runtime_error(&quot;Insufficient operands&quot;);
+                }
+                
+                double b = stack.top(); stack.pop();
+                double a = stack.top(); stack.pop();
+                apply_operator(stack, token, a, b);
+            } 
+            else if (is_function(token)) {
+                if (stack.empty()) {
+                    throw std::runtime_error(&quot;No operand for function&quot;);
+                }
+                
+                double a = stack.top(); stack.pop();
+                apply_function(stack, token, a);
+            }
+            else {
+                try {
+                    stack.push(std::stod(token));
+                } catch (const std::invalid_argument&amp;) {
+                    throw std::runtime_error(&quot;Invalid token: &quot; + token);
+                }
+            }
+        }
+        
+        if (stack.size() != 1) {
+            throw std::runtime_error(&quot;Invalid expression&quot;);
+        }
+        
+        return stack.top();
+    }
+
+private:
+    static bool is_operator(const std::string&amp; token) {
+        if (token.size() != 1) return false;
+        char op = token[0];
+        return op == '+' || op == '-' || op == '*' || op == '/' || op == '^';
+    }
+    
+    static bool is_function(const std::string&amp; token) {
+        return token == &quot;sqrt&quot; || token == &quot;sin&quot; || token == &quot;cos&quot; || token == &quot;log&quot;;
+    }
+    
+    static void apply_operator(std::stack&lt;double&gt;&amp; stack, const std::string&amp; op, 
+                              double a, double b) {
+        switch (op[0]) {
+            case '+': stack.push(a + b); break;
+            case '-': stack.push(a - b); break;
+            case '*': stack.push(a * b); break;
+            case '/': 
+                if (b == 0) throw std::runtime_error(&quot;Division by zero&quot;);
+                stack.push(a / b); 
+                break;
+            case '^': stack.push(std::pow(a, b)); break;
+        }
+    }
+    
+    static void apply_function(std::stack&lt;double&gt;&amp; stack, const std::string&amp; func, 
+                              double a) {
+        if (func == &quot;sqrt&quot;) {
+            if (a &lt; 0) throw std::runtime_error(&quot;Square root of negative number&quot;);
+            stack.push(std::sqrt(a));
+        } else if (func == &quot;sin&quot;) {
+            stack.push(std::sin(a));
+        } else if (func == &quot;cos&quot;) {
+            stack.push(std::cos(a));
+        } else if (func == &quot;log&quot;) {
+            if (a &lt;= 0) throw std::runtime_error(&quot;Logarithm of non-positive number&quot;);
+            stack.push(std::log(a));
+        }
+    }
+};&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 第3章</span>
+nbText: <span class="hljs-string">&quot;&quot;&quot;
+&lt;div class=&quot;chapter&quot; id=&quot;chapter3&quot;&gt;
+    &lt;h2&gt;第 3 章: 交互式 REPL&lt;/h2&gt;
+    
+    &lt;p&gt;实现一个完整的交互式计算器，支持历史记录和命令补全。&lt;/p&gt;
+&lt;/div&gt;
+&quot;&quot;&quot;</span>
+
+nbText: <span class="hljs-string">&quot;&quot;&quot;&lt;div class=&quot;filename&quot;&gt;repl.cpp&lt;/div&gt;&quot;&quot;&quot;</span>
+nbCode:
+  <span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;&quot;&quot;#include &quot;rpn_engine.hpp&quot;
+#include &lt;iostream&gt;
+#include &lt;iomanip&gt;
+#include &lt;vector&gt;
+#include &lt;string&gt;
+
+class REPL {
+private:
+    std::vector&lt;std::string&gt; history;
+    
+    void print_help() {
+        std::cout &lt;&lt; &quot;\n=== RPN Calculator Commands ===\n&quot;;
+        std::cout &lt;&lt; &quot;  &lt;expression&gt;    Evaluate RPN expression\n&quot;;
+        std::cout &lt;&lt; &quot;  help            Show this help message\n&quot;;
+        std::cout &lt;&lt; &quot;  history         Show calculation history\n&quot;;
+        std::cout &lt;&lt; &quot;  clear           Clear the screen\n&quot;;
+        std::cout &lt;&lt; &quot;  quit / exit     Exit the program\n&quot;;
+        std::cout &lt;&lt; &quot;\nOperators: + - * / ^\n&quot;;
+        std::cout &lt;&lt; &quot;Functions: sqrt sin cos log\n&quot;;
+        std::cout &lt;&lt; &quot;Example: '5 5 + 3 *' =&gt; 30\n&quot;;
+        std::cout &lt;&lt; &quot;==============================\n&quot;;
+    }
+    
+    void print_history() {
+        if (history.empty()) {
+            std::cout &lt;&lt; &quot;No history yet.\n&quot;;
+            return;
+        }
+        
+        std::cout &lt;&lt; &quot;\n=== Calculation History ===\n&quot;;
+        for (size_t i = 0; i &lt; history.size(); ++i) {
+            std::cout &lt;&lt; i + 1 &lt;&lt; &quot;. &quot; &lt;&lt; history[i] &lt;&lt; &quot;\n&quot;;
+        }
+        std::cout &lt;&lt; &quot;===========================\n&quot;;
+    }
+
+public:
+    void run() {
+        std::cout &lt;&lt; &quot;RPN Calculator REPL (Type 'help' for commands)\n&quot;;
+        std::cout &lt;&lt; &quot;==============================================\n\n&quot;;
+        
+        std::string line;
+        while (true) {
+            std::cout &lt;&lt; &quot;rpn&gt; &quot;;
+            if (!std::getline(std::cin, line)) break;
+            
+            line.erase(0, line.find_first_not_of(&quot; \t\n\r&quot;));
+            line.erase(line.find_last_not_of(&quot; \t\n\r&quot;) + 1);
+            
+            if (line.empty()) continue;
+            
+            if (line == &quot;quit&quot; || line == &quot;exit&quot;) {
+                std::cout &lt;&lt; &quot;Goodbye!\n&quot;;
+                break;
+            } else if (line == &quot;help&quot;) {
+                print_help();
+                continue;
+            } else if (line == &quot;history&quot;) {
+                print_history();
+                continue;
+            } else if (line == &quot;clear&quot;) {
+                for (int i = 0; i &lt; 50; ++i) std::cout &lt;&lt; &quot;\n&quot;;
+                continue;
+            }
+            
+            try {
+                double result = RPNEngine::evaluate(line);
+                std::cout &lt;&lt; &quot;= &quot; &lt;&lt; std::setprecision(12) &lt;&lt; result &lt;&lt; &quot;\n&quot;;
+                history.push_back(line + &quot; =&gt; &quot; + std::to_string(result));
+            } catch (const std::exception&amp; e) {
+                std::cout &lt;&lt; &quot;Error: &quot; &lt;&lt; e.what() &lt;&lt; &quot;\n&quot;;
+            }
+        }
+    }
+};
+
+int main() {
+    REPL repl;
+    repl.run();
+    return 0;
+}&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 第4章</span>
+nbText: <span class="hljs-string">&quot;&quot;&quot;
+&lt;div class=&quot;chapter&quot; id=&quot;chapter4&quot;&gt;
+    &lt;h2&gt;第 4 章: 单文件发布 &amp; 交叉编译&lt;/h2&gt;
+    
+    &lt;p&gt;将整个项目打包成单个文件，并支持跨平台编译。&lt;/p&gt;
+&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 添加表格</span>
+nbRawHtml: <span class="hljs-string">&quot;&quot;&quot;
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;平台&lt;/th&gt;
+        &lt;th&gt;编译命令&lt;/th&gt;
+        &lt;th&gt;文件大小&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Linux/macOS&lt;/td&gt;
+        &lt;td&gt;&lt;code&gt;g++ -std=c++17 -O3 -o rpn rpn_single.cpp&lt;/code&gt;&lt;/td&gt;
+        &lt;td&gt;~92 KB&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Windows (MinGW)&lt;/td&gt;
+        &lt;td&gt;&lt;code&gt;x86_64-w64-mingw32-g++ -std=c++17 -O3 -o rpn.exe rpn_single.cpp&lt;/code&gt;&lt;/td&gt;
+        &lt;td&gt;~85 KB&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+&quot;&quot;&quot;</span>
+
+nbText: <span class="hljs-string">&quot;&quot;&quot;
+&lt;div class=&quot;console&quot;&gt;# 下载完整项目
+git clone https://github.com/sonya-lzy/rpn_calc.git
+cd rpn_calc
+
+# 编译并运行
+g++ -std=c++17 -o rpn src/rpn_calc.cpp
+./rpn&lt;/div&gt;
+&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 第5章</span>
+nbText: <span class="hljs-string">&quot;&quot;&quot;
+&lt;div class=&quot;chapter&quot; id=&quot;chapter5&quot;&gt;
+    &lt;h2&gt;第 5 章: 扩展功能与挑战&lt;/h2&gt;
+    
+    &lt;div class=&quot;note&quot;&gt;
+        &lt;p&gt;&lt;strong&gt;扩展挑战&lt;/strong&gt;&lt;/p&gt;
+        &lt;ol&gt;
+            &lt;li&gt;&lt;strong&gt;复数支持&lt;/strong&gt;：扩展支持复数运算&lt;/li&gt;
+            &lt;li&gt;&lt;strong&gt;变量存储&lt;/strong&gt;：实现变量赋值和使用&lt;/li&gt;
+            &lt;li&gt;&lt;strong&gt;脚本模式&lt;/strong&gt;：支持从文件读取表达式&lt;/li&gt;
+            &lt;li&gt;&lt;strong&gt;图形界面&lt;/strong&gt;：使用 Qt 或 ImGUI 添加 GUI&lt;/li&gt;
+            &lt;li&gt;&lt;strong&gt;网络计算&lt;/strong&gt;：实现客户端-服务器模式&lt;/li&gt;
+        &lt;/ol&gt;
+    &lt;/div&gt;
+    
+    &lt;p&gt;
+        &lt;strong&gt;GitHub 仓库:&lt;/strong&gt; &lt;a href=&quot;https://github.com/sonya-lzy/rpn_calc&quot;&gt;https://github.com/sonya-lzy/rpn_calc&lt;/a&gt;&lt;br&gt;
+        &lt;strong&gt;在线文档:&lt;/strong&gt; &lt;a href=&quot;https://sonya-lzy.github.io/rpn_calc/rpn_manual.html&quot;&gt;https://sonya-lzy.github.io/rpn_calc/rpn_manual.html&lt;/a&gt;
+    &lt;/p&gt;
+&lt;/div&gt;
+&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 页脚</span>
+nbText: <span class="hljs-string">fmt&quot;&quot;&quot;
+&lt;hr&gt;
+&lt;p style=&quot;text-align: center; color: #666; font-size: 0.9em;&quot;&gt;
+    © 2024 RPN Calculator Project | C++ 编程作业&lt;br&gt;
+    生成时间: {getTime().format(&quot;yyyy-MM-dd HH:mm:ss&quot;)}
+&lt;/p&gt;
+&quot;&quot;&quot;</span>
+
+<span class="hljs-comment"># 保存文档</span>
+nbsave()
+
+<span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;✅ Nimib文档已生成: rpn_manual.html&quot;</span>
+</code></pre>
+</section><script>
+function toggleSourceDisplay() {
+  var btn = document.getElementById("show")
+  var source = document.getElementById("source");
+  if (btn.innerHTML=="Show Source") {
+    btn.innerHTML = "Hide Source";
+    source.style.display = "block";
+  } else {
+    btn.innerHTML = "Show Source";
+    source.style.display = "none";
+  }
+}
+</script></body>
+</html>
